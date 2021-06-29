@@ -40,6 +40,7 @@ int main(void) {
 		}
 	// 3) Write output
 	PORTC = cntavail;
+	cntavail = 0x00;
 	}
 	return 0;
 }
