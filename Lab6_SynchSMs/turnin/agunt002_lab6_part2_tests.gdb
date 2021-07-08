@@ -67,6 +67,24 @@ timeContinue
 expect PORTB 0x04
 checkResult
 
+test "Press A0 to Pause"
+setPINA ~0x01
+timeContinue
+expect state Pause
+expect PORTB 0x04
+checkResult
+
+test "Restart game"
+setPINA ~0x00
+timeContinue
+setPINA ~0x01
+timeContinue
+setPINA ~0x00
+timeContinue
+expect state NextLed
+expect PORTB 0x02
+checkResult
+
 # Report on how many tests passed/tests ran
 set $passed=$tests-$failed
 eval "shell echo Passed %d/%d tests.\n",$passed,$tests
