@@ -25,6 +25,7 @@
 
 echo ======================================================\n
 echo Running all tests..."\n\n
+
 define timeContinue
 	if $argc > 0
 		set $i = $arg0
@@ -51,34 +52,37 @@ expectPORTC 0
 checkResult
 
 # Add tests below
-test "Test add 1"
-set state = Start
-timeContinue 
+test "Inital LED is PB0"
+timeContinue
+expect PORTB 0x01
+checkResult
+
+test "After 1 second PB1"
+timeContinue
+expect PORTB 0x02
+checkResult
+
+test "After 2 seconds PB2"
+timeContinue
+expect PORTB 0x04
+checkResult
+
+test "Press A0 to Pause"
 setPINA ~0x01
-timeContinue 10
-setPINA ~0x00
 timeContinue
-expectPORTB 0x08
-expect state Plus
+expect state Pause
+expect PORTB 0x04
 checkResult
 
-test "Test minus 1"
-set state = Start
-timeContinue
-setPINA ~0x02
-timeContinue 10
+test "Restart game"
 setPINA ~0x00
 timeContinue
-expectPORTB 0x06
-expect state Minus
-checkResult
-
-test "Test Reset"
-set state = Init
-setPINA ~0x03
+setPINA ~0x01
 timeContinue
-expectPORTB 0x00
-expect state Reset
+setPINA ~0x00
+timeContinue
+expect state NextLed
+expect PORTB 0x02
 checkResult
 
 # Report on how many tests passed/tests ran
