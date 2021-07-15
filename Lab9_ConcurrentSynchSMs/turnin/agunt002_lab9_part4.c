@@ -6,7 +6,7 @@
  *
  *	I acknowledge all content contained herein, excluding template or example
  *	code, is my own original work.
- *	DEMO VIDEO: https://drive.google.com/file/d/1zFRZsK0tDSk3z7ekMlRuON4G9mC7wMmI/view?usp=sharing
+ *	VIDEO DEMO: https://drive.google.com/file/d/1FDNyAn13TB-6EgAG5UY9v_davRo1lgPC/view?usp=sharing
  */
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -16,8 +16,13 @@
 enum ThreeLEDStates {ThreeStart, Zero, One, Two} ThreeLEDstate;
 enum BlinkingLEDStates {BlinkingStart, BlinkingInit, Blink} BlinkingLEDstate;
 enum CombineLEDStates {CombineStart, CombineInit} CombineLEDstate;
+enum SpeakerStates {SpeakerStart, SpeakerOff, SpeakerOn, SpeakerUp, SpeakerDown, SpeakerRelease} Speakerstate;
 unsigned char threeLEDs = 0x00;
 unsigned char blinkingLED = 0x00;
+unsigned char Speaker = 0x00;
+unsigned char i = 0;
+unsigned char j = 0;
+unsigned char array[] = {1, 2, 3, 4, 5, 6};
 
 volatile unsigned char TimerFlag = 0;
 void TimerISR() { TimerFlag = 1;}
@@ -94,8 +99,66 @@ void TickCombineLEDsSM() {
         }
         switch (CombineLEDstate) {
                 case CombineStart:      break;
-                case CombineInit:       PORTB = ((blinkingLED << 3) | (threeLEDs)); break;
+                case CombineInit:       PORTB = ((Speaker << 4) | (blinkingLED << 3) | (threeLEDs)); break;
                 default:       		break;
+        }
+}
+
+void TickSpeakerSM() {
+        switch (Speakerstate) {
+                case SpeakerStart:      Speakerstate = SpeakerOff; break;
+                case SpeakerOff:        if ((~PINA & 0x07) == 0x04) {
+						Speakerstate = SpeakerOn;
+					}
+					else if ((~PINA & 0x07) == 0x01) {
+						Speakerstate = SpeakerUp;
+					}
+					else if ((~PINA & 0x07) == 0x02) {
+                                                Speakerstate = SpeakerDown;
+                                        }
+					else {
+						Speakerstate = SpeakerOff;
+					}	
+					break;
+
+		case SpeakerOn:		if ((~PINA & 0x07) == 0x00) {
+						Speakerstate = SpeakerOff;
+					}
+					else {
+						Speakerstate = SpeakerOn;
+					}
+					break;
+
+		case SpeakerDown:	Speakerstate = SpeakerRelease;
+					break;
+
+		case SpeakerUp:		Speakerstate = SpeakerRelease;
+					break;
+
+		case SpeakerRelease:	if ((~PINA & 0x07) == 0x00) {Speakerstate = SpeakerOff;}
+					else {Speakerstate = SpeakerRelease;}
+					break;
+
+                default:                Speakerstate = SpeakerStart; break;
+        }
+        switch (Speakerstate) {
+                case SpeakerStart:      break;
+
+                case SpeakerOff:        Speaker = 0x00; i = 0; break;
+
+		case SpeakerOn:		if (i <= array[j]) {Speaker = 0x01;}
+					else if (i <= (array[j] * 2)) {Speaker = 0x00;}
+				        else {i = 0;}
+					++i;
+					break;
+
+		case SpeakerUp:		if (j > 0) {--j;}
+					break;
+
+		case SpeakerDown:	if (j < 6) {++j;}
+					break;
+
+                default:                break;
         }
 }
 
@@ -104,12 +167,13 @@ int main(void) {
     DDRB = 0xFF; PORTB = 0x00;
     unsigned long ThreeElapsed = 0;
     unsigned long BlinkingElapsed = 0;
-    const unsigned long timerPeriod = 100;
-    TimerSet(100);
+    const unsigned long timerPeriod = 1;
+    TimerSet(1);
     TimerOn();
     ThreeLEDstate = ThreeStart;
     BlinkingLEDstate = BlinkingStart;
     CombineLEDstate = CombineStart;
+    Speakerstate = SpeakerStart;
 
     while (1) {
 	if (ThreeElapsed >= 300) {
@@ -120,11 +184,13 @@ int main(void) {
 		TickBlinkingLEDSM();
 		BlinkingElapsed = 0;
 	}
+	TickSpeakerSM();
 	TickCombineLEDsSM();
 	while(!TimerFlag) {};
 	TimerFlag = 0;
 	ThreeElapsed += timerPeriod;
 	BlinkingElapsed += timerPeriod;
+	
     }
     return 0;
 }
